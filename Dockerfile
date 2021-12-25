@@ -14,11 +14,12 @@ USER root
 WORKDIR /root/
 RUN mkdir /root/public
 RUN mkdir /root/public/products
+RUN mkdir /root/config
 #RUN chown -R www:www /root/public
 #RUN chmod -R 777 /var/root/public
 #RUN chmod -R 777 /var/root/public/products
 
-COPY --from=builder /app/.env.yml .
+COPY --from=builder /app/config/.env.yml /root/config/
 COPY --from=builder /app/main .
 EXPOSE 9090
 CMD ["./main"]

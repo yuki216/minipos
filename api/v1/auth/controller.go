@@ -78,37 +78,6 @@ func (controller *Controller) Login(c echo.Context) error {
 	return c.JSON(common.NewSuccessResponse(response))
 }
 
-
-// InsertUser Create new user handler
-func (controller *Controller) RegisterAdmin(c echo.Context) error {
-	var insertUserRequest = new(request.RegisterAdminRequest)
-	if err := c.Bind(insertUserRequest); err != nil {
-		return c.JSON(common.NewErrorResponse(common.ControllerResponse{
-			Code:    common.ErrBadRequest,
-			Message: err.Error(),
-			Data:    nil,
-		}))
-	}
-
-	if insertUserRequest.Password != insertUserRequest.RePassword {
-		return c.JSON(common.NewErrorResponse(common.ControllerResponse{
-			Code:    common.ErrBadRequest,
-			Message: "Password & Re type Password Not Match",
-			Data:    nil,
-		}))
-	}
-	admin, err := controller.service.RegisterAdmin(*insertUserRequest)
-	if err != nil {
-		return c.JSON(common.NewErrorResponse(common.ControllerResponse{
-			Code:    common.ErrForbidden,
-			Message: err.Error(),
-			Data:    nil,
-		}))
-	}
-
-	return c.JSON(common.NewSuccessResponse(admin))
-}
-
 func (controller *Controller) RegisterUser(c echo.Context) error {
 	var insertUserRequest = new(request.RegisterUserRequest)
 

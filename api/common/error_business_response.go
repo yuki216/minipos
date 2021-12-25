@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"go-hexagonal-auth/business"
 	"net/http"
 )
@@ -8,6 +9,7 @@ import (
 type errorBusinessResponseCode string
 
 const (
+	errResponseServer errorBusinessResponseCode = "response_server_error"
 	errInternalServerError errorBusinessResponseCode = "internal_server_error"
 	errHasBeenModified     errorBusinessResponseCode = "data_has_been modified"
 	errNotFound            errorBusinessResponseCode = "data_not_found"
@@ -28,9 +30,10 @@ func NewErrorBusinessResponse(err error) (int, BusinessResponse) {
 
 //errorMapping error for missing header key with given value
 func errorMapping(err error) (int, BusinessResponse) {
+	fmt.Println(err)
 	switch err {
 	default:
-		return newInternalServerErrorResponse()
+		return newInternalServerErrorResponse(err.Error())
 	case business.ErrNotFound:
 		return newNotFoundResponse()
 	case business.ErrInvalidSpec:
@@ -41,10 +44,10 @@ func errorMapping(err error) (int, BusinessResponse) {
 }
 
 //newInternalServerErrorResponse default internal server error response
-func newInternalServerErrorResponse() (int, BusinessResponse) {
+func newInternalServerErrorResponse(err string) (int, BusinessResponse) {
 	return http.StatusInternalServerError, BusinessResponse{
-		errInternalServerError,
-		"Internal server error",
+		errResponseServer,
+		"error "+err,
 		map[string]interface{}{},
 	}
 }

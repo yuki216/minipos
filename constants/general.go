@@ -3,7 +3,8 @@ package constants
 // Date format constants
 const (
 	Authorization     = "Authorization"
-	DateTimeFormatStd = "2006-01-02 15:04:05"
+	DateTimeFormatStd = "2006-01-02T15:04:05+07:00"
+	DateTimeFormat = "2006-01-02 15:04:05"
 	DateFormatStd     = "2006-01-02"
 	TimeFormatStd     = "15:04:05"
 	TimeFormatShort   = "15:04"

@@ -7,13 +7,13 @@ import (
 	"go-hexagonal-auth/api"
 	bniController "go-hexagonal-auth/api/v1/bni"
 	userController "go-hexagonal-auth/api/v1/user"
-	adminService "go-hexagonal-auth/business/admin"
 	bniService "go-hexagonal-auth/business/bni"
 	userService "go-hexagonal-auth/business/user"
 	"go-hexagonal-auth/config"
-	adminRepository "go-hexagonal-auth/modules/admin"
 	bniRepository "go-hexagonal-auth/modules/bni"
+	billingRepository "go-hexagonal-auth/modules/billing"
 	migration "go-hexagonal-auth/modules/migration"
+	clientRepository "go-hexagonal-auth/modules/sangu_bni"
 	userRepository "go-hexagonal-auth/modules/user"
 
 	authController "go-hexagonal-auth/api/v1/auth"
@@ -29,17 +29,34 @@ import (
 	echo "github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+func newPostgresConnection(cfg *config.Config) *gorm.DB {
+	stringConnection := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s",
+		cfg.DB.Host, cfg.DB.Port, cfg.DB.Username, cfg.DB.Password, cfg.DB.Name,
+	)
+	db, err := gorm.Open(postgres.Open(stringConnection), &gorm.Config{})
+
+	if err != nil {
+		panic(err)
+	}
+
+	migration.InitMigrate(db)
+	fmt.Println("Migration Complete")
+	return db
+}
 
 func newDatabaseConnection(cfg *config.Config) *gorm.DB {
 
 	configDB := map[string]string{
-		"DB_Username": cfg.DB.Username,
-		"DB_Password": cfg.DB.Password,
-		"DB_Port":     cfg.DB.Port,
-		"DB_Host":     cfg.DB.Host,
-		"DB_Name":     cfg.DB.Name,
+		"DB_Username": cfg.DBSecondary.Username,
+		"DB_Password": cfg.DBSecondary.Password,
+		"DB_Port":     cfg.DBSecondary.Port,
+		"DB_Host":     cfg.DBSecondary.Host,
+		"DB_Name":     cfg.DBSecondary.Name,
 	}
 
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local",
@@ -59,17 +76,18 @@ func newDatabaseConnection(cfg *config.Config) *gorm.DB {
 	return db
 }
 
+
 func main() {
-	fmt.Println("OK")
+
 	//load config if available or set to default
 	config := config.InitConfig()
 	//initialize database connection based on given config
-	dbConnection := newDatabaseConnection(&config)
-
+	//dbConnection := newDatabaseConnection(&config)
+	dbSecondConnection := newPostgresConnection(&config)
 
 
 	//initiate user repository
-	userRepo := userRepository.NewGormDBRepository(dbConnection)
+	userRepo := userRepository.NewGormDBRepository(dbSecondConnection)
 
 	//initiate user service
 	userService := userService.NewService(userRepo)
@@ -77,15 +95,10 @@ func main() {
 	//initiate user controller
 	userController := userController.NewController(userService)
 
-	//initiate user repository
-	adminRepo := adminRepository.NewGormDBRepository(dbConnection)
-
-	//initiate user service
-	adminService := adminService.NewService(adminRepo)
 
 
 	//initiate auth service
-	authService := authService.NewService(userService, adminService, adminRepo, userRepo, config)
+	authService := authService.NewService(userService, userRepo, config)
 
 	//initiate auth controller
 	authController := authController.NewController(authService, config)
@@ -96,20 +109,26 @@ func main() {
 	//initiate media
 	mediaController := mediaController.NewController(mediaService, config)
 
+	clientRepo := clientRepository.NewClient()
+	clientRepo.ClientID = config.BNIConfig.ClientID
+	clientRepo.BaseURL	= config.BNIConfig.Url
+	clientRepo.ClientSecret = config.BNIConfig.Key
 	//initiate user repository
-	bniRepo := bniRepository.NewBNIConfiguration(&config.BNIConfig,dbConnection)
+	bniRepo := bniRepository.NewBNIConfiguration(&config.BNIConfig,dbSecondConnection, &clientRepo)
+
+	//initiate user repository
+	billingRepo := billingRepository.NewGormDBRepository(dbSecondConnection, config)
 
 	//initiate user service
-	bniService := bniService.NewService(&config,bniRepo)
+	bniService := bniService.NewService(&config,bniRepo, billingRepo)
 
 	//initiate user controller
 	bniController := bniController.NewController(bniService, config)
 
-	fmt.Println(bniRepo)
 	//create echo http
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{ "http://localhost:9090"},
+		AllowOrigins: []string{ "http://localhost:3030"},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
 

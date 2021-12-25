@@ -19,7 +19,6 @@ func RegisterPath(e *echo.Echo, authController *auth.Controller, userController 
 	//authentication with Versioning endpoint
 	authV1 := e.Group("auth/api/v1/auth")
 	authV1.POST("/login", authController.Login)
-	authV1.POST("/register-admin", authController.RegisterAdmin)
 	authV1.POST("/register-user", authController.RegisterUser)
 
 	//user with Versioning endpoint
@@ -38,7 +37,11 @@ func RegisterPath(e *echo.Echo, authController *auth.Controller, userController 
 
 	bniV1 := e.Group("h2h/api/v1/bni/billing")
 	bniV1.POST("/create", bniController.CreateBilling)
+	bniV1.POST("/inquiry", bniController.InquiryBilling)
+	bniV1.POST("/update", bniController.UpdateBilling)
 
+	bnicallbackV1 := e.Group("")
+	bnicallbackV1.POST("", bniController.NotificationBilling)
 	//health check
 	e.GET("auth/health", func(c echo.Context) error {
 		return c.NoContent(200)
